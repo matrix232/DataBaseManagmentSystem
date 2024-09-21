@@ -1,12 +1,19 @@
 (defvar command)
 (defvar *table*)
+(defvar *database* (make-hash-table :test 'equal)) 
+
+(defstruct table
+  name
+  rows
+  columns)
 
 (format t "Enter command: ~%")
 (setq command (read))
 
 (defun create-table (name rows cells)
-  (setq *table* (make-array (list rows cells)))
-  (format t "Table ~a created with size ~a and ~a~%" name rows cells))
+  (let ((new-table (make-table :name name :rows rows :columns cells)))
+    (setf (gethash name *database*) new-table)
+    (format t "Table ~a created with size ~a and ~a~%" name rows cells)))
 
 (defun write-data (row column)
   (format t "Enter value: ")
@@ -17,11 +24,12 @@
   (print (aref *table* row column)))
 
 (defun handler (comnd)
+  ; Обработчик команд 
   (cond
     ((string= comnd "CREATE")
      (progn
        (print "CREATE command")
-       (create-table "table" 3 3)))
+       (create-table "users" nil 3)))
     ((string= comnd "READ")
      (progn
        (print "READ command")
