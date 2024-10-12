@@ -4,7 +4,6 @@
   rows
   columns)
 
-(defvar *table*)
 (defvar *database* (make-hash-table :test 'equal)) 
 
 (format t "Enter command: ~%")
@@ -23,9 +22,28 @@
 
 ; Функции для работы с данными
 (defun add-data (table-name data)
-  (let ((datas (getf *database* table-name)))
-    (push data datas)
-    (setf (getf *database* table-name) datas)))
+  (let ((data-list (getf *database* table-name)))
+    (push data data-list)
+    (setf (getf *database* table-name) data-list)))
+
+(defun read-data (table-name &key index)
+  ; Чтение данных. Если index не указан или nil - вернет все записи таблицы
+  (let ((data-list (getf *database* table-name)))
+    (when data-list
+      (when index (return-from read-data (nth index data-list)))
+      (return-from read-data data-list))))
+
+(defun remove-data (table-name &key index)
+  (let ((data-list (getf *database* table-name)))
+    (when data-list
+      (if index
+	  (setf (getf *database* table-name) (remove (elt data-list index) data-list :count 1))
+	  (setf (getf *database* table-name) (remove data-list :count 1))))))
+
+(defun update-data (table-name index field-name new-value)
+  (let ((data-list (read-data table-name :index index)))
+    (setf (slot-value data-list field-name) new-value))) 
+	
 
 (defun handler (comnd)
   ; Обработчик команд 
