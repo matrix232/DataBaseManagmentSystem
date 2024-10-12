@@ -4,7 +4,6 @@
   rows
   columns)
 
-(defvar *table*)
 (defvar *database* (make-hash-table :test 'equal)) 
 
 (format t "Enter command: ~%")
