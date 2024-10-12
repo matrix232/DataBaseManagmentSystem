@@ -11,7 +11,7 @@
 
 ; Функции для работы с таблицей
 (defun create-table (name &optional columns)
-  (unless (find name *tables* :key #'first)
+  (unless (find name *database* :key #'first)
     (push (cons name columns) *database*))
   (format t "TABLE CREATED~%"))
 
@@ -37,13 +37,11 @@
   (let ((data-list (getf *database* table-name)))
     (when data-list
       (if index
-	  (setf (getf *database* table-name) (remove (elt data-list index) data-list :count 1))
-	  (setf (getf *database* table-name) (remove data-list :count 1))))))
+	  (setf (getf *database* table-name) (remove (elt data-list index) data-list :count 1))))))
 
 (defun update-data (table-name index field-name new-value)
   (let ((data-list (read-data table-name :index index)))
     (setf (slot-value data-list field-name) new-value))) 
-	
 
 (defun handler (comnd)
   ; Обработчик команд 
@@ -64,7 +62,11 @@
     (t (print "Unknow command"))))
   
 
-(handler command)
+(defun create-user-table ()
+  (create-table 'users '((id integer primary key)
+		(username string)
+		(password string)
+			 (email string))))
 
-
+(create-user-table)
 
