@@ -10,3 +10,17 @@
     *columns* - список колонок таблицы, хранит в точечные пары **(column-name . column-type)**
 
 * ``*database*`` - хэш-таблица, отвечающая за хранение созданных *table*. Хранит таблицы по ключ-значение **(table-name : table)**
+
+Методы
+------
+
+* create-table - метод, который создает таблицу. 
+Входные данные:
+    **name** - имя таблицы
+    **columns** - список пар названия колонки и типа колонки.
+
+    Пример создания таблицы:
+    ::(create-table 'users '((id integer primary key)
+                         (username string)
+                         (password string)
+                         (email string))))::
