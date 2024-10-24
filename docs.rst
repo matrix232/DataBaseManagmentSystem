@@ -24,10 +24,7 @@
 
 :: 
     
-(create-table 'users '((id integer primary key)
-                         (username string)
-                         (password string)
-                         (email string))))
+(create-table 'users '((id integer primary key) (username string) (password string) (email string))))
 
 
 *table-exist* - метод, который проверяет создалась ли таблица.
