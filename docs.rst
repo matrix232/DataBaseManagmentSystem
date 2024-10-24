@@ -20,7 +20,7 @@
     **columns** - список пар названия колонки и типа колонки.
 
     Пример создания таблицы:
-    ::(create-table 'users '((id integer primary key)
+    .. code-block::(create-table 'users '((id integer primary key)
                          (username string)
                          (password string)
-                         (email string))))::
+                         (email string))))
