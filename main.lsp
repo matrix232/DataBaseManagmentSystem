@@ -56,6 +56,10 @@
 (defun table-exist (table-name)
   (not (null (gethash table-name *database*))))
 
+;(defun create-database-file (file-name))
+
+;(defun load-database-file (filename))
+
 (defun handler (comnd)
   "Обработчик команд."
   (cond
