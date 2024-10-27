@@ -1,2 +1,5 @@
 .#main.lsp
 #main.lsp#
+.gitignore~
+main.lsp~
+main.fasl
