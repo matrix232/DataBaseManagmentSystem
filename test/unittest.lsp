@@ -1,0 +1,28 @@
+(load "../main.lsp")
+
+(defun test-create-table ()
+  (create-table "test-table" '(("id" integer primary key)
+			       ("name" string)
+			       ("email" string)))
+  (format t "~%Тестовая таблица 'test-table' создана.~%"))
+
+(defun test-insert-into ()
+  (test-create-table)
+  (insert-into "test-table" '((id . 1) (name . "admin") (email . "admin@example.com")))
+  (let ((table (gethash "test-table" *database*))
+	(expected-row '((id . 1) (name . "admin") (email . "admin@example.com"))))
+    (if (and table (equal (first (table-rows table)) expected-row))
+	 (format t "test-insert-into: PASSED~%")
+         (format t "test-insert-into: FAILED - ожидалось ~a, но было ~a~%" expected-row (table-rows table)))))
+
+(defun run-unittest ()
+  (format t "Начало тестирования...~%")
+  (test-insert-into)
+  (format t "Тестирования завершенно.~%"))
+(load "../main.lsp")
+
+(defun test-create-table ()
+  (create-table "test-table" '(("id" integer primary key)
+			       ("name" string)
+			       ("email" string)))
+  (format t "Тестовая таблица 'test-table' создана.~%"))

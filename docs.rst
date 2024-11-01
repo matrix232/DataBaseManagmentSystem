@@ -48,4 +48,7 @@
     * **table-name** - имя таблицы.
     * **columns** - колонки для чтения из таблицы.
 
+::
+
+(select-from "users" "username" "email"))
 
