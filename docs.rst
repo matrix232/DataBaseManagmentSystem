@@ -24,7 +24,7 @@
 
 :: 
     
-(create-table 'users '((id integer primary key) (username string) (password string) (email string))))
+(create-table "users" '(("id" integer primary key) ("username" string) ("password" string) ("email" string))))
 
 
 *insert-into* - функция, для вставки данных в таблицу.
@@ -35,7 +35,7 @@
 
 ::
 
-(insert-into 'users '((id . 1) (username . "admin") (password . "passADM") (email . "adm@mail.ru")))
+(insert-into "users" '(("id" . 1) ("username" . "admin") ("password" . "passADM") ("email" . "adm@mail.ru")))
 
 *select-from* - функция для чтения данных из таблицы. Возвращает список точечных пар (колонка . данные).
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
