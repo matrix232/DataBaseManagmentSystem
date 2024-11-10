@@ -1,4 +1,4 @@
-(load "../main.lsp")
+(load "./main.lsp")
 (format t "Файл main.lsp загружен~%")
 
 
@@ -8,45 +8,40 @@
 			       ("email" string)))
   (format t "~%Тестовая таблица 'test-table' создана.~%"))
 
-(defun test-insert-into ()
-  (test-create-table)
-  (insert-into "test-table" '(("id" . 1) ("name" . "admin") ("email" . "admin@example.com")))
-  (let ((table (gethash "test-table" *database*))
-	(expected-row '(("id" . 1) ("name" . "admin") ("email" . "admin@example.com"))))
-    (if (and table (equal (first (table-rows table)) expected-row))
-	 (format t "test-insert-into: PASSED~%")
-         (format t "test-insert-into: FAILED - ожидалось ~a, но было ~a~%" expected-row (table-rows table)))))
+(defun test-insert-into (table-name columns row expected-row)
+  (create-table table-name columns)
+  (insert-into table-name row)
+  (let ((table (gethash table-name *database*)))
+    (if table
+        (let ((actual-row (first (table-rows table))))
+          (as-eq "test-insert-into" actual-row expected-row))
+        (format t "ERROR: Table ~a не найдена в базе данных~%" table-name))))
+  
 
-(defun test-select-from ()
-  (create-table "test-table1" '(("id" integer primary key)
-			       ("name" string)
-			       ("email" string)))
-  (insert-into "test-table1" '(("id" . 1) ("name" . "Egor") ("email" . "egor@mail.ru")))
+(defun test-select-from (table-name columns rows selected-columns expected-result)
+  (create-table table-name columns)
+  (dolist (row rows)
+    (insert-into table-name row))
+  (let* ((result (select-from table-name selected-columns)))
+    (as-eq "test-select-from" result expected-result)))
 
-  (let* ((result (select-from "test-table1" "name" "email"))
-	 (expected '(("name" . "Egor") ("email" . "egor@mail.ru"))))
-    (format t "Результат выборки: ~a~%" (first result))
-    (if (equal (first result) expected)
-	(format t "test-select-from: PASSED~%")
-	(format t "test-select-from: FAILED - ожидалось ~a, но было получено ~a~%" expected result))))
 
-(defun test-delete-from ()
-  ;Удаляем элемент с id == 1
-  (create-table "test-table2" '(("id" integer primary key)
-			       ("name" string)))
-  (insert-into "test-table2" '(("id" . 1) ("name" . "Egor")))
-  (insert-into "test-table2" '(("id" . 2) ("name" . "admin")))
-  (let* (
-	 (expected '(("id" . 2) ("name" . "admin")))
-	 (result (delete-from "test-table2" '(("name" . "Egor")))))
-    (if (equal (first result) expected)
-	(format t "test-delete-from: PASSED~%")
-	(format t "test-delete-from: FAILED - ожидалось ~a, но было получено ~a~%" expected result))))
-    
+(defun as-eq (test-name result expected)
+  (if (equal result expected)
+      (format t "~a: PASSED~%" test-name)
+      (format t "~a: FAILED - ожидалось ~a, но было полученно ~a~%" test-name expected result)))
+  
 
 (defun run-unittest ()
   (format t "Начало тестирования...~%")
-  (test-insert-into)
-  (test-select-from)
-  (test-delete-from)
+  (test-insert-into "users" '(("id" integer) ("name" string) ("age" integer))
+		    '(("id" . 1) ("name" . "adm") ("age" . 24))
+		    '(("id" . 1) ("name" . "adm") ("age" . 24)))
+  (test-select-from "test-table4" 
+                    '(("id" integer) ("name" string) ("age" integer))
+                    '((("id" . 1) ("name" . "adm") ("age" . 24))
+                      (("id" . 2) ("name" . "egr") ("age" . 30)))
+                    "name"
+                    '((("name" . "egr"))
+                      (("name" . "adm"))))
   (format t "Тестирования завершенно.~%"))

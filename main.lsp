@@ -73,7 +73,7 @@
   (create-table "users1" '(("id" integer primary key)
                          ("username" string)
                          ("password" string)
-                         ("email" string))))
+                           ("email" string))))
 
 ;(create-user-table)
 ;(if (table-exist "users1")

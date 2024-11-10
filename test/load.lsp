@@ -1,3 +1,4 @@
-(load "unittest.lsp")
+(load "./test/unittest.lsp")
 
 (run-unittest)
+
