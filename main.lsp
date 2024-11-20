@@ -22,19 +22,23 @@
 	      (format t "ERROR: Some columns is not exist in table ~a~%" table-name)))
 	(format t "ERROR: Table ~a not found!~%" table-name))))
 
-(defun select-from (table-name &rest columns)
+(defun select-from (table-name columns &optional condition)
   (let ((table (gethash table-name *database*)))
     (if table
-        (let* ((table-columns (get-column-names (table-columns table)))
-               (missing-cols (remove-if (lambda (col) (member col table-columns :test 'equal)) columns)))
-          (if (null missing-cols)
-              (mapcar (lambda (row) (remove-if-not (lambda (pair)(member (car pair) columns :test 'equal)) row)) (table-rows table))
-              (progn
-                (format t "ERROR: Columns ~a not found in table ~a~%" missing-cols table-name)
-                nil)))
+  (let ((table-columns (mapcar #'car (table-columns table))))
+    (if (every (lambda (col) (member col table-columns :test 'equal)) columns)
+        (let ((filtered-rows
+          ; Фильтрация строк по условиям, если условий нет - возвращает выбранные колонки.
+          (if condition (remove-if-not (lambda (row) (every (lambda (cond) (equal (cdr cond) (cdr (assoc (car cond) row)))) condition)) (table-rows table))
+        (table-rows table))))
+    ; Отображение выбранных строк.
+    (mapcar (lambda (row) (remove-if-not (lambda (pair) (member (car pair) columns :test 'equal)) row)) filtered-rows))
         (progn
-          (format t "ERROR: Table ~a not found!~%" table-name)
-          nil))))
+    (format t "ERROR: Columns ~a not found in table ~a.~%" columns table-name)
+    nil)))
+  (progn
+    (format t "ERROR: Table ~a not found!~%" table-name)
+    nil))))
 
 	      
 (defun delete-from (table-name cond-pair)
@@ -49,8 +53,11 @@
   (if (gethash table-name *database*)
       (progn
 	(remhash table-name *database*)
-	(format t "Table ~a dropped!~%" table-name))
-      (format t "ERROR: Table ~a not found!~%" table-name)))
+	(format t "Table ~a dropped!~%" table-name)
+	1)
+      (progn
+	(format t "ERROR: Table ~a not found!~%" table-name)
+	nil)))
 
 (defun update-data (table-name index field-name new-value)
   (let ((table (gethash table-name *database*)))
@@ -75,14 +82,5 @@
                          ("password" string)
                            ("email" string))))
 
-;(create-user-table)
-;(if (table-exist "users1")
-;    (progn
- ;     (format t "Таблица 'users1' существует~%")
-;      (insert-into "users1" '(("id" . 1) ("username" . "admin") ("password" . "passADM") ("email" . "adm@mail.ru")))
-					;(insert-into 'users '((id . 2) (username . "Egor") (password . "passw") (email . "egor@mail.ru")))
-;      (format t "ДАТА ~a~%" (select-from "users1" "username" "password")))
-;    (format t "Таблица 'users1' не существует!"))
-		 
 
 
