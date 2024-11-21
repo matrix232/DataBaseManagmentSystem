@@ -14,9 +14,7 @@
 
 ::
 
-(test-insert-into "users" '(("id" integer) ("name" string) ("age" integer))
-		'(("id" . 1) ("name" . "adm") ("age" . 24))
-		'(("id" . 1) ("name" . "adm") ("age" . 24)))
+(test-insert-into "users" '(("id" integer) ("name" string) ("age" integer)) '(("id" . 1) ("name" . "adm") ("age" . 24)) '(("id" . 1) ("name" . "adm") ("age" . 24)))
 
 *test-select-from* - тестовая функция для получения данных из таблицы.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
