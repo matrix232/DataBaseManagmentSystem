@@ -2,11 +2,9 @@
 (format t "Файл main.lsp загружен~%")
 
 
-(defun test-create-table ()
-  (create-table "test-table" '(("id" integer primary key)
-			       ("name" string)
-			       ("email" string)))
-  (format t "~%Тестовая таблица 'test-table' создана.~%"))
+(defun test-create-table (table-name &optional columns expected-result)
+  (let ((result (create-table table-name columns)))
+    (as-eq "test-create-table" result expected-result)))
 
 (defun test-insert-into (table-name columns row expected-row)
   (create-table table-name columns)
@@ -22,13 +20,22 @@
   (create-table table-name columns)
   (dolist (row rows)
     (insert-into table-name row))
-  (let* ((result (select-from table-name selected-columns condition)))
+  (let ((result (select-from table-name selected-columns condition)))
     (as-eq "test-select-from" result expected-result)))
+
+(defun test-select-all (table-name columns rows expected-result)
+  (create-table table-name columns)
+  (dolist (row rows)
+    (insert-into table-name row))
+  (let ((result (select-all table-name)))
+    (as-eq "test-select-all" result expected-result)))
 
 (defun test-drop-table (table-name columns expected-result)
   (create-table table-name columns)
   (let ((result (drop-table table-name)))
     (as-eq "test-drop-table" result expected-result)))
+
+(defun test-update-data (table-name columns rows field-name new-value expected-result))
 
 
 (defun as-eq (test-name result expected)
@@ -38,16 +45,22 @@
   
 
 (defun run-unittest ()
-  (format t "Начало тестирования...~%")
+  (format t "Начало тестирования...~%~%")
+  ;; Тестирование создания таблицы.
+  (test-create-table "test-table01" '(("id" . 1) ("name" . "adm")) 1)
+  ;; Тестирование вставки данных в таблицу.
   (test-insert-into "users" '(("id" integer) ("name" string) ("age" integer))
 		    '(("id" . 1) ("name" . "adm") ("age" . 24))
 		    '(("id" . 1) ("name" . "adm") ("age" . 24)))
-  (test-select-from "test-table117"
+  (test-drop-table "test-table111" '(("id" integer) ("name" string) ("age" integer)) 1)
+  ;; Тестирование чтения данных из таблицы без условия.
+  (test-select-from "test-table111"
 		    '(("id" integer) ("name" string) ("age" integer))
 		    '((("id" . 1) ("name" . "egor") ("age" . 19))
 		      (("id" . 2) ("name" . "admin") ("age" . 24)))
 		    '("name")
 		    '((("name" . "admin")) (("name" . "egor"))))
+  ;; Тестирование чтения данных из таблицы с условием.
   (test-select-from "test-table125"
 		    '(("id" integer) ("name" string) ("age" integer))
 		    '((("id" . 1) ("name" . "egor") ("age" . 19))
@@ -55,5 +68,13 @@
 		    '("name")
 		    '(("name" . "admin"))
 		    '(("age" . 24)))
+  ;; Тестирование удаления таблицы.
   (test-drop-table "table1" '(("id" integer) ("name" string)) 1)
-  (format t "Тестирования завершенно.~%"))
+  ;; Тестирование чтения всех данных из таблицы.
+  (test-select-all "table1" '(("id" integer) ("name" string))
+		   '((("id" . 1) ("name" . "adm"))
+		     (("id" . 2) ("name" . "adm1")))
+		   '((("id" . 2) ("name" . "adm1"))
+		     (("id" . 1) ("name" . "adm"))))
+		   
+  (format t "~%Тестирования завершенно.~%"))
