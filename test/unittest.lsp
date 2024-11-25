@@ -15,7 +15,6 @@
           (as-eq "test-insert-into" actual-row expected-row))
         (format t "ERROR: Table ~a не найдена в базе данных~%" table-name))))
   
-
 (defun test-select-from (table-name columns rows selected-columns expected-result &optional condition)
   (create-table table-name columns)
   (dolist (row rows)
@@ -35,7 +34,12 @@
   (let ((result (drop-table table-name)))
     (as-eq "test-drop-table" result expected-result)))
 
-(defun test-update-data (table-name columns rows field-name new-value expected-result))
+(defun test-update-data (table-name columns rows id field-name new-value expected-result)
+  (create-table table-name columns)
+  (dolist (row rows)
+    (insert-into table-name row))
+  (let ((result (update table-name id field-name new-value))) 
+    (as-eq "test-update" result expected-result)))
 
 
 (defun as-eq (test-name result expected)
@@ -43,7 +47,6 @@
       (format t "~a: PASSED~%" test-name)
       (format t "~a: FAILED - ожидалось ~a, но было полученно ~a~%" test-name expected result)))
   
-
 (defun run-unittest ()
   (format t "Начало тестирования...~%~%")
   ;; Тестирование создания таблицы.
@@ -76,5 +79,14 @@
 		     (("id" . 2) ("name" . "adm1")))
 		   '((("id" . 2) ("name" . "adm1"))
 		     (("id" . 1) ("name" . "adm"))))
-		   
+  ;; Тестирование функции обновления данных по id
+  (test-drop-table "table999" '(("id" integer) ("name" string) ("age" integer)) 1)
+  (test-update-data "table999" '(("id" integer) ("name" string) ("age" integer))
+		    '((("id" . 1) ("name" . "egor") ("age" . 19))
+		      (("id" . 2) ("name" . "admin") ("age" . 24)))
+		    1
+		    "name"
+		    "update-egor"
+		    '(("id" . 1) ("name" . "update-egor") ("age" . 19)))
+  		   
   (format t "~%Тестирования завершенно.~%"))
