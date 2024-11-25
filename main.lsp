@@ -1,3 +1,6 @@
+(defpackage :DBMS-package
+  (:use :cl))
+
 (defstruct table
   name
   rows
@@ -7,8 +10,10 @@
 
 ; Функции для работы с таблицей
 (defun create-table (name &optional columns)
-  (unless (gethash name *database*)
-    (setf (gethash name *database*) (make-table :name name :columns columns :rows nil))))
+  (progn
+    (unless (gethash name *database*)
+      (setf (gethash name *database*) (make-table :name name :columns columns :rows nil)))
+    1))
 
 (defun insert-into (table-name row-data)
   (let ((table (gethash table-name *database*)))
@@ -25,20 +30,29 @@
 (defun select-from (table-name columns &optional condition)
   (let ((table (gethash table-name *database*)))
     (if table
-  (let ((table-columns (mapcar #'car (table-columns table))))
-    (if (every (lambda (col) (member col table-columns :test 'equal)) columns)
-        (let ((filtered-rows
-          ; Фильтрация строк по условиям, если условий нет - возвращает выбранные колонки.
-          (if condition (remove-if-not (lambda (row) (every (lambda (cond) (equal (cdr cond) (cdr (assoc (car cond) row)))) condition)) (table-rows table))
-        (table-rows table))))
-    ; Отображение выбранных строк.
-    (mapcar (lambda (row) (remove-if-not (lambda (pair) (member (car pair) columns :test 'equal)) row)) filtered-rows))
-        (progn
-    (format t "ERROR: Columns ~a not found in table ~a.~%" columns table-name)
-    nil)))
-  (progn
-    (format t "ERROR: Table ~a not found!~%" table-name)
-    nil))))
+	(let ((table-columns (mapcar #'car (table-columns table))))
+	  (if (every (lambda (col) (member col table-columns :test 'equal)) columns)
+              (let ((filtered-rows
+		      ; Фильтрация строк по условиям, если условий нет - возвращает выбранные колонки.
+		      (if condition
+			  (remove-if-not (lambda (row) (every (lambda (condit) (equal (cdr condit) (cdr (assoc (car condit) row)))) condition)) (table-rows table))
+			  (table-rows table))))
+		; Отображение выбранных строк.
+		(mapcar (lambda (row) (remove-if-not (lambda (pair) (member (car pair) columns :test 'equal)) row)) filtered-rows))
+              (progn
+		(format t "ERROR: Columns ~a not found in table ~a.~%" columns table-name)
+		nil)))
+	(progn
+	  (format t "ERROR: Table ~a not found!~%" table-name)
+	  nil))))
+ 
+(defun select-all (table-name)
+  (let ((table (gethash table-name *database*)))
+    (if table
+	(table-rows table)
+	(progn
+	  (format t "ERROR: Table ~a not found!~%")
+	  nil))))
 
 	      
 (defun delete-from (table-name cond-pair)
@@ -59,12 +73,31 @@
 	(format t "ERROR: Table ~a not found!~%" table-name)
 	nil)))
 
-(defun update-data (table-name index field-name new-value)
+(defun update (table-name id field-name new-value)
+  "Обновляет значение поля field-name для строки с указанным id."
   (let ((table (gethash table-name *database*)))
-    (when table
-      (let ((data (nth index (table-rows table))))
-        (setf (getf data field-name) new-value)  ; Обновляем поле в записи
-        (setf (gethash table-name *database*) table)))))
+    (if table
+        (let ((rows (table-rows table))
+              (updated-row nil))
+          (dolist (row rows (or updated-row nil)) 
+            (when (equal (cdr (assoc "id" row)) id)
+              (setf (cdr (assoc field-name row)) new-value) 
+              (setf updated-row t))) 
+          (if updated-row
+              (progn
+                (setf (table-rows table) rows)
+                (setf (gethash table-name *database*) table)
+                (format t "UPDATE SUCCESSFUL: Table ~a, ID ~a, Field ~a -> ~a~%"
+                        table-name id field-name new-value)
+                updated-row)
+              (progn
+                (format t "ERROR UPDATE~%")
+                (format t "No row with id ~a found in table ~a.~%" id table-name)
+                nil)))
+        (progn
+          (format t "ERROR: Table ~a not found!~%" table-name)
+          nil))))
+
 
 (defun table-exist (table-name)
   (not (null (gethash table-name *database*))))
@@ -76,11 +109,6 @@
 
 ;(defun load-database-file (filename))
 
-(defun create-user-table ()
-  (create-table "users1" '(("id" integer primary key)
-                         ("username" string)
-                         ("password" string)
-                           ("email" string))))
 
 
 
