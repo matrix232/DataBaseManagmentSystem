@@ -20,10 +20,11 @@
     (if table
 	(let* ((columns (table-columns table))
 	  (column-names (get-column-names columns)))
-	  ;;Проверка, что все переданные ключи есть в колонках таблицы
-	  (if (every (lambda (col) (member col column-names :test 'equal)) (mapcar #'car row-data))
+	  ;;Проверка, что все переданные ключи есть в колонках таблицы, ключи приводятся из строкового формата в знаковый
+	  (if (every (lambda (col) (member (intern (string-upcase (string col))) column-names :test 'eq)) (mapcar #'car row-data))
 	      (progn
 		(push row-data (table-rows table)))
+		;; (format t "Rows ~a inserted into~%" row-data))
 	      (format t "ERROR: Some columns is not exist in table ~a~%" table-name)))
 	(format t "ERROR: Table ~a not found!~%" table-name))))
 
@@ -31,7 +32,7 @@
   (let ((table (gethash table-name *database*)))
     (if table
 	(let ((table-columns (mapcar #'car (table-columns table))))
-	  (if (every (lambda (col) (member col table-columns :test 'equal)) columns)
+	  (if (every (lambda (col) (member (intern (string-upcase (string col))) table-columns :test 'eq)) columns)
               (let ((filtered-rows
 		      ; Фильтрация строк по условиям, если условий нет - возвращает выбранные колонки.
 		      (if condition
@@ -80,9 +81,9 @@
         (let ((rows (table-rows table))
               (updated-row nil))
           (dolist (row rows (or updated-row nil)) 
-            (when (equal (cdr (assoc "id" row)) id)
+            (when (equal (cdr (assoc 'id row)) id)
               (setf (cdr (assoc field-name row)) new-value) 
-              (setf updated-row t))) 
+              (setf updated-row row))) 
           (if updated-row
               (progn
                 (setf (table-rows table) rows)
@@ -103,7 +104,7 @@
   (not (null (gethash table-name *database*))))
 
 (defun get-column-names (columns)
-  (mapcar #'car columns))
+  (mapcar (lambda (col) (intern (string (car col)))) columns))
 
 ;(defun create-database-file (file-name))
 
