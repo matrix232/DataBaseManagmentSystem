@@ -50,43 +50,44 @@
 (defun run-unittest ()
   (format t "Начало тестирования...~%~%")
   ;; Тестирование создания таблицы.
-  (test-create-table "test-table01" '(("id" . 1) ("name" . "adm")) 1)
+  (test-create-table 'test-table01 '((id . 1) (name . "adm")) 1)
   ;; Тестирование вставки данных в таблицу.
-  (test-insert-into "users" '(("id" integer) ("name" string) ("age" integer))
-		    '(("id" . 1) ("name" . "adm") ("age" . 24))
-		    '(("id" . 1) ("name" . "adm") ("age" . 24)))
-  (test-drop-table "test-table111" '(("id" integer) ("name" string) ("age" integer)) 1)
+  (test-insert-into 'users '((id integer) (name string) (age integer))
+		    '((id . 1) (name . "adm") (age . 24))
+		    '((id . 1) (name . "adm") (age . 24)))
+  (test-drop-table 'test-table111 '((id integer) (name string) (age integer)) 1)
   ;; Тестирование чтения данных из таблицы без условия.
-  (test-select-from "test-table111"
-		    '(("id" integer) ("name" string) ("age" integer))
-		    '((("id" . 1) ("name" . "egor") ("age" . 19))
-		      (("id" . 2) ("name" . "admin") ("age" . 24)))
-		    '("name")
-		    '((("name" . "admin")) (("name" . "egor"))))
+  (test-select-from 'test-table111
+		    '((id integer) (name string) (age integer))
+		    '(((id . 1) (name . "egor") (age . 19))
+		      ((id . 2) (name . "admin") (age . 24)))
+		    '(name)
+		    '(((name . "admin")) ((name . "egor"))))
   ;; Тестирование чтения данных из таблицы с условием.
-  (test-select-from "test-table125"
-		    '(("id" integer) ("name" string) ("age" integer))
-		    '((("id" . 1) ("name" . "egor") ("age" . 19))
-		      (("id" . 2) ("name" . "admin") ("age" . 24)))
-		    '("name")
-		    '(("name" . "admin"))
-		    '(("age" . 24)))
+  (test-drop-table 'test-table1211 '((id integer) (name string)) 1)
+  (test-select-from 'test-table1211
+		    '((id integer) (name string) (age integer))
+		    '(((id . 1) (name . "egor") (age . 19))
+		      ((id . 2) (name . "admin") (age . 24)))
+		    '(name)
+		    '(((name . "admin")))
+		    '((age . 24)))
   ;; Тестирование удаления таблицы.
-  (test-drop-table "table1" '(("id" integer) ("name" string)) 1)
+  (test-drop-table 'table1 '((id integer) (name string)) 1)
   ;; Тестирование чтения всех данных из таблицы.
-  (test-select-all "table1" '(("id" integer) ("name" string))
-		   '((("id" . 1) ("name" . "adm"))
-		     (("id" . 2) ("name" . "adm1")))
-		   '((("id" . 2) ("name" . "adm1"))
-		     (("id" . 1) ("name" . "adm"))))
+  (test-select-all 'table1 '((id integer) (name string))
+		   '(((id . 1) (name . "adm"))
+		     ((id . 2) (name . "adm1")))
+		   '(((id . 2) (name . "adm1"))
+		     ((id . 1) (name . "adm"))))
   ;; Тестирование функции обновления данных по id
-  (test-drop-table "table999" '(("id" integer) ("name" string) ("age" integer)) 1)
-  (test-update-data "table999" '(("id" integer) ("name" string) ("age" integer))
-		    '((("id" . 1) ("name" . "egor") ("age" . 19))
-		      (("id" . 2) ("name" . "admin") ("age" . 24)))
+  (test-drop-table 'table999 '((id integer) (name string) (age integer)) 1)
+  (test-update-data 'table999 '((id integer) (name string) (age integer))
+		    '(((id . 1) (name . "egor") (age . 19))
+		      ((id . 2) (name . "admin") (age . 24)))
 		    1
-		    "name"
+		    'name
 		    "update-egor"
-		    '(("id" . 1) ("name" . "update-egor") ("age" . 19)))
+		    '((id . 1) (name . "update-egor") (age . 19)))
   		   
   (format t "~%Тестирования завершенно.~%"))
