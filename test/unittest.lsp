@@ -1,6 +1,6 @@
 (load "./main.lsp")
 (format t "Файл main.lsp загружен~%")
-
+;(in-package :DBMS-package)
 
 (defun test-create-table (table-name &optional columns expected-result)
   (let ((result (create-table table-name columns)))
@@ -62,7 +62,8 @@
 		    '(((id . 1) (name . "egor") (age . 19))
 		      ((id . 2) (name . "admin") (age . 24)))
 		    '(name)
-		    '(((name . "admin")) ((name . "egor"))))
+		    '(((name . "admin")) ((name . "egor")))
+		    nil)
   ;; Тестирование чтения данных из таблицы с условием.
   (test-drop-table 'test-table1211 '((id integer) (name string)) 1)
   (test-select-from 'test-table1211
