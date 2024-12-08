@@ -20,7 +20,7 @@
     (if table
 	(let* ((columns (table-columns table))
 	  (column-names (get-column-names columns)))
-	  ;;Проверка, что все переданные ключи есть в колонках таблицы, ключи приводятся из строкового формата в знаковый
+	  ;;Проверка, что все переданные ключи есть в колонках таблицы, ключи приводятся из  строкового формата в знаковый
 	  (if (every (lambda (col) (member (intern (string-upcase (string col))) column-names :test 'eq)) (mapcar #'car row-data))
 	      (progn
 		(push row-data (table-rows table)))
@@ -36,7 +36,7 @@
               (let ((filtered-rows
 		      ; Фильтрация строк по условиям, если условий нет - возвращает выбранные колонки.
 		      (if condition
-			  (remove-if-not (lambda (row) (every (lambda (condit) (equal (cdr condit) (cdr (assoc (car condit) row)))) condition)) (table-rows table))
+			  (remove-if-not (create-condition condition) (table-rows table))
 			  (table-rows table))))
 		; Отображение выбранных строк.
 		(mapcar (lambda (row) (remove-if-not (lambda (pair) (member (car pair) columns :test 'equal)) row)) filtered-rows))
@@ -66,7 +66,7 @@
 
 (defun drop-table (table-name)
   (if (gethash table-name *database*)
-      (progn
+        (progn
 	(remhash table-name *database*)
 	(format t "Table ~a dropped!~%" table-name)
 	1)
@@ -106,9 +106,51 @@
 (defun get-column-names (columns)
   (mapcar (lambda (col) (intern (string (car col)))) columns))
 
-;(defun create-database-file (file-name))
-
-;(defun load-database-file (filename))
+(defmacro create-condition (conditions)
+  ;; Если условие вида (< age 25)
+  (cond
+    ((null conditions) `(lambda (row) t))
+    ((and (listp conditions) (symbolp (car conditions)) (symbolp (cadr conditions)))
+	 `(lambda (row)
+	    (let* ((col (cadr ',conditions))
+		   (op (car ',conditions))
+		   (val (caddr ',conditions))
+		   (row-val (cdr (assoc col row))))
+	      (case op
+		((=) (equal row-val val))
+		((>) (> row-val val))
+		((<) (< row-val val))
+		((>=) (>= row-val val))
+		((<=) (<= row-val val))
+		((/=) (not(equal row-val val)))
+		(t (error "Unsupported operator: ~a~%" op))))))
+	;; Если условие - одиночное выражение (age . 25)
+	((and (consp conditions) (not (listp (car conditions))))
+	 `(lambda (row)
+	    (equal (cdr ',conditions) (cdr (assoc (car ',conditions) row)))))
+	;; Если условие - список выражений
+	((listp conditions)
+	 `(lambda (row)
+	    (every (lambda (condit)
+		     (cond ((and (listp condit) (symbolp (car condit)) (symbolp (cadr condit)))
+			    (let* ((col (cadr condit))
+				   (op (car condit))
+				   (val (caddr condit))
+				   (row-val (cdr (assoc col row))))
+			      (case op
+				((=) (equal row-val val))
+				((>) (> row-val val))
+				((<) (< row-val val))
+				((>=) (>= row-val val))
+				((<=) (<= row-val val))
+				((/=) (not (equal row-val val)))
+				(t (error "Unsupported operator: ~a~%" op)))))
+			   ((and (consp condit) (not (listp (car condit))))
+			    (equal (cdr condit) (cdr (assoc (car condit) row))))
+			   (t (error "Unsupported condition format: ~a~%" condit)))))
+	    ',conditions)))
+  (t (error "Unsupported condition format ~a~%" conditions)))
+	 
 
 
 
