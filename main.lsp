@@ -109,7 +109,6 @@
 (defmacro create-condition (conditions)
   ;; Если условие вида (< age 25)
   (cond
-    ((null conditions) `(lambda (row) t))
     ((and (listp conditions) (symbolp (car conditions)) (symbolp (cadr conditions)))
 	 `(lambda (row)
 	    (let* ((col (cadr ',conditions))
@@ -123,7 +122,7 @@
 		((>=) (>= row-val val))
 		((<=) (<= row-val val))
 		((/=) (not(equal row-val val)))
-		(t (error "Unsupported operator: ~a~%" op))))))
+		(error "Unsupported operator: ~a~%" op)))))
 	;; Если условие - одиночное выражение (age . 25)
 	((and (consp conditions) (not (listp (car conditions))))
 	 `(lambda (row)
@@ -144,12 +143,12 @@
 				((>=) (>= row-val val))
 				((<=) (<= row-val val))
 				((/=) (not (equal row-val val)))
-				(t (error "Unsupported operator: ~a~%" op)))))
+				(error "Unsupported operator: ~a~%" op))))
 			   ((and (consp condit) (not (listp (car condit))))
 			    (equal (cdr condit) (cdr (assoc (car condit) row))))
-			   (t (error "Unsupported condition format: ~a~%" condit)))))
+			   (error "Unsupported condition format: ~a~%" condit))))
 	    ',conditions)))
-  (t (error "Unsupported condition format ~a~%" conditions)))
+  `(error "Unsupported condition format ~a~%" ',conditions))
 	 
 
 
