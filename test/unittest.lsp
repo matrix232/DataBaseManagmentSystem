@@ -41,6 +41,25 @@
   (let ((result (update table-name id field-name new-value))) 
     (as-eq "test-update" result expected-result)))
 
+(defun test-backup-table (table-name columns rows backup-name expected-result)
+  (create-table table-name columns)
+  (dolist (row rows)
+    (insert-into table-name row))
+  (let ((result (backup-table table-name backup-name)))
+    (as-eq "test-backup-table" result expected-result)))
+
+(defun test-save-table-to-file (table-name columns rows path expected-result)
+  (create-table table-name columns)
+  (dolist (row rows)
+    (insert-into table-name row))
+  (let ((result (save-table-to-file table-name path)))
+    (as-eq "test-save-table-to-file" result expected-result)))
+
+;(defun test-create-condition (rows condition expected-res)
+;  (let ((compiled-condition (create-condition condition)))
+;    (let ((result (remove-if-not compiled-condition rows)))
+ ;     (as-eq "test-create-condition" result expected-res))))
+
 
 (defun as-eq (test-name result expected)
   (if (equal result expected)
@@ -72,7 +91,7 @@
 		      ((id . 2) (name . "admin") (age . 24)))
 		    '(name)
 		    '(((name . "admin")))
-		    '((age . 24)))
+		    '((> age 23)))
   ;; Тестирование удаления таблицы.
   (test-drop-table 'table1 '((id integer) (name string)) 1)
   ;; Тестирование чтения всех данных из таблицы.
@@ -90,5 +109,21 @@
 		    'name
 		    "update-egor"
 		    '((id . 1) (name . "update-egor") (age . 19)))
+  ;; Тестирование функции создания копии таблицы
+  (test-backup-table 'table2213 '((id integer) (name string) (age integer))
+		     '(((id . 1) (name . "egor"))
+		       ((id . 2) (name . "alex"))
+		       ((id . 3) (name . "asd")))
+		     'backup-table2213
+		     1)
+  ;; Тестирование функции записи таблицы в CSV файл
+  (test-drop-table 'table2214 '((id integer) (name string) (age integer)) 1)
+  (test-save-table-to-file 'table2214 '((id integer) (name string) (age integer))
+			   '(((id . 1) (name . "alex") (age . 23))
+			     ((id . 2) (name . "egor") (age . 24))
+			     ((id . 3) (name . "vova") (age . 25))
+			     ((id . 4) (name . "daniil") (age . 12)))
+			   "output.txt"
+			   1)
   		   
   (format t "~%Тестирования завершенно.~%"))
