@@ -31,22 +31,36 @@
 (defun select-from (table-name columns &optional condition)
   (let ((table (gethash table-name *database*)))
     (if table
-	(let ((table-columns (mapcar #'car (table-columns table))))
-	  (if (every (lambda (col) (member (intern (string-upcase (string col))) table-columns :test 'eq)) columns)
-              (let ((filtered-rows
-		      ; Фильтрация строк по условиям, если условий нет - возвращает выбранные колонки.
-		      (if condition
-			  (remove-if-not (create-condition condition) (table-rows table))
-			  (table-rows table))))
-		; Отображение выбранных строк.
-		(mapcar (lambda (row) (remove-if-not (lambda (pair) (member (car pair) columns :test 'equal)) row)) filtered-rows))
+        (let ((table-columns (mapcar #'car (table-columns table))))
+          (if (every (lambda (col) 
+                       (member (intern (string-upcase (string col))) table-columns :test 'eq)) 
+                     columns)
+              (let* ((filtered-rows
+                      ;; Фильтрация строк по условиям
+                      (if condition
+                          (remove-if-not 
+                           (lambda (row) 
+                             (every (lambda (condit) 
+                                      (equal (cdr condit) 
+                                             (cdr (assoc (car condit) row))))
+                                    condition))
+                           (table-rows table))
+                          (table-rows table))))
+                ;; Отображение выбранных строк
+                (mapcar 
+                 (lambda (row) 
+                   (remove-if-not 
+                    (lambda (pair) 
+                      (member (car pair) columns :test 'equal))
+                    row))
+                 filtered-rows))
               (progn
-		(format t "ERROR: Columns ~a not found in table ~a.~%" columns table-name)
-		nil)))
-	(progn
-	  (format t "ERROR: Table ~a not found!~%" table-name)
-	  nil))))
- 
+                (format t "ERROR: Columns ~a not found in table ~a.~%" columns table-name)
+                nil)))
+        (progn
+          (format t "ERROR: Table ~a not found!~%" table-name)
+          nil))))
+
 (defun select-all (table-name)
   (let ((table (gethash table-name *database*)))
     (if table
@@ -99,6 +113,38 @@
           (format t "ERROR: Table ~a not found!~%" table-name)
           nil))))
 
+(defun backup-table (table-name backup-name)
+  (let ((table (gethash table-name *database*)))
+    (if table
+	(progn
+	  (setf (gethash backup-name *database*)
+		(make-table    :name (table-name table)
+			       :columns (copy-list (table-columns table))
+			       :rows (copy-list (table-rows table))))
+	  (progn
+	    (format t "Backup of table ~a success, create backup table ~a!~%" table-name backup-name)
+	    1))
+	(progn
+	  (format t "ERROR: Table ~a nor found!~%" table-name)
+	  nil))))
+
+(defun save-table-to-file (table-name file-path)
+  (let ((table (gethash table-name *database*)))
+    (if table
+        (with-open-file (stream file-path :direction :output 
+                               :if-exists :supersede
+                               :if-does-not-exist :create)
+          (let ((columns (table-columns table)))
+            ;; Запись заголовков
+            (format stream "~{~A~^,~}~%" (mapcar #'car columns))
+            ;; Запись строк
+            (dolist (row (table-rows table))
+              (format stream "~{~A~^,~}~%" 
+                      (mapcar (lambda (col) (cdr (assoc (car col) row)))  columns))))
+          1)
+        (format t "ERROR: Table ~a not found!~%" table-name))))
+
+			       
 
 (defun table-exist (table-name)
   (not (null (gethash table-name *database*))))
@@ -106,50 +152,11 @@
 (defun get-column-names (columns)
   (mapcar (lambda (col) (intern (string (car col)))) columns))
 
-(defmacro create-condition (conditions)
-  ;; Если условие вида (< age 25)
-  (cond
-    ((and (listp conditions) (symbolp (car conditions)) (symbolp (cadr conditions)))
-	 `(lambda (row)
-	    (let* ((col (cadr ',conditions))
-		   (op (car ',conditions))
-		   (val (caddr ',conditions))
-		   (row-val (cdr (assoc col row))))
-	      (case op
-		((=) (equal row-val val))
-		((>) (> row-val val))
-		((<) (< row-val val))
-		((>=) (>= row-val val))
-		((<=) (<= row-val val))
-		((/=) (not(equal row-val val)))
-		(error "Unsupported operator: ~a~%" op)))))
-	;; Если условие - одиночное выражение (age . 25)
-	((and (consp conditions) (not (listp (car conditions))))
-	 `(lambda (row)
-	    (equal (cdr ',conditions) (cdr (assoc (car ',conditions) row)))))
-	;; Если условие - список выражений
-	((listp conditions)
-	 `(lambda (row)
-	    (every (lambda (condit)
-		     (cond ((and (listp condit) (symbolp (car condit)) (symbolp (cadr condit)))
-			    (let* ((col (cadr condit))
-				   (op (car condit))
-				   (val (caddr condit))
-				   (row-val (cdr (assoc col row))))
-			      (case op
-				((=) (equal row-val val))
-				((>) (> row-val val))
-				((<) (< row-val val))
-				((>=) (>= row-val val))
-				((<=) (<= row-val val))
-				((/=) (not (equal row-val val)))
-				(error "Unsupported operator: ~a~%" op))))
-			   ((and (consp condit) (not (listp (car condit))))
-			    (equal (cdr condit) (cdr (assoc (car condit) row))))
-			   (error "Unsupported condition format: ~a~%" condit))))
-	    ',conditions)))
-  `(error "Unsupported condition format ~a~%" ',conditions))
-	 
+
+
+
+
+
 
 
 
