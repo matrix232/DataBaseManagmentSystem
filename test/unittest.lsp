@@ -55,10 +55,18 @@
   (let ((result (save-table-to-file table-name path)))
     (as-eq "test-save-table-to-file" result expected-result)))
 
-;(defun test-create-condition (rows condition expected-res)
-;  (let ((compiled-condition (create-condition condition)))
-;    (let ((result (remove-if-not compiled-condition rows)))
- ;     (as-eq "test-create-condition" result expected-res))))
+(defun test-create-condition ()
+  (let* ((rows '(((id . 1) (name . "Alice") (age . 25))
+                 ((id . 2) (name . "Egor") (age . 30))
+                 ((id . 3) (name . "Alex") (age . 35))))
+         ;; Условие: возраст < 30
+         (condition1 (create-condition '((< age 30))))
+         ;; Условие: возраст между 20 и 40
+         (condition3 (create-condition '((>= age 30) (/= name "Alex")))))
+    (format t "Rows matching condition1: ~a~%" (remove-if-not condition1 rows))
+    (format t "Rows matching condition3: ~a~%" (remove-if-not condition3 rows))))
+
+
 
 
 (defun as-eq (test-name result expected)
@@ -88,10 +96,11 @@
   (test-select-from 'test-table1211
 		    '((id integer) (name string) (age integer))
 		    '(((id . 1) (name . "egor") (age . 19))
-		      ((id . 2) (name . "admin") (age . 24)))
+		      ((id . 2) (name . "admin") (age . 24))
+		      ((id . 3) (name . "alex") (age . 26)))
 		    '(name)
 		    '(((name . "admin")))
-		    '((> age 23)))
+		    '((> age 23) (/= name "alex")))
   ;; Тестирование удаления таблицы.
   (test-drop-table 'table1 '((id integer) (name string)) 1)
   ;; Тестирование чтения всех данных из таблицы.
@@ -125,5 +134,6 @@
 			     ((id . 4) (name . "daniil") (age . 12)))
 			   "output.txt"
 			   1)
+  (test-create-condition)
   		   
   (format t "~%Тестирования завершенно.~%"))
