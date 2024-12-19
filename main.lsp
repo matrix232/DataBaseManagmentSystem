@@ -34,24 +34,14 @@
         (let ((table-columns (mapcar #'car (table-columns table))))
           (if (every (lambda (col) 
                        (member (intern (string-upcase (string col))) table-columns :test 'eq)) 
-                     columns)
+		     columns)
               (let* ((filtered-rows
                       ;; Фильтрация строк по условиям
-                      (if condition
-                          (remove-if-not 
-                           (lambda (row) 
-                             (every (lambda (condit) 
-                                      (equal (cdr condit) 
-                                             (cdr (assoc (car condit) row))))
-                                    condition))
-                           (table-rows table))
+                       (if condition
+			   (remove-if-not (create-condition condition) (table-rows table))
                           (table-rows table))))
                 ;; Отображение выбранных строк
-                (mapcar 
-                 (lambda (row) 
-                   (remove-if-not 
-                    (lambda (pair) 
-                      (member (car pair) columns :test 'equal))
+                (mapcar (lambda (row) (remove-if-not (lambda (pair) (member (car pair) columns :test 'equal))
                     row))
                  filtered-rows))
               (progn
@@ -151,62 +141,42 @@
   (mapcar (lambda (col) (intern (string (car col)))) columns))
 
 (defmacro create-condition (conditions)
-  ;; Если условие вида (< age 25)
-  (cond
-    ;; Условие вида (< age 25)
-    ((and (listp conditions)
-          (symbolp (car conditions)) ;; оператор
-          (symbolp (cadr conditions))) ;; имя столбца
-     `(lambda (row)
-        (let* ((col ',(cadr conditions))
-               (op ',(car conditions))
-               (val ',(caddr conditions))
-               (row-val (cdr (assoc col row))))
-          (case op
-            ((=) (equal row-val val))
-            ((>) (> row-val val))
-            ((<) (< row-val val))
-            ((>=) (>= row-val val))
-            ((<=) (<= row-val val))
-            ((/=) (not (equal row-val val)))
-            (otherwise (error "Unsupported operator: ~a" op))))))
-    ;; Условие вида (age . 25)
-    ((and (consp conditions)
-          (not (listp (car conditions)))) ;; пара вида (key . value)
-     `(lambda (row)
-        (equal (cdr ',conditions) (cdr (assoc (car ',conditions) row)))))
-    ;; Список условий
-    ((listp conditions)
-     `(lambda (row)
-        (every (lambda (condit)
-                 (cond
-                   ;; Условие вида (< age 25)
-                   ((and (listp condit)
-                         (symbolp (car condit))
-                         (symbolp (cadr condit)))
-                    (let* ((col ',(cadr condit))
-                           (op ',(car condit))
-                           (val ',(caddr condit))
-                           (row-val (cdr (assoc col row))))
-                      (case op
-                        ((=) (equal row-val val))
-                        ((>) (> row-val val))
-                        ((<) (< row-val val))
-                        ((>=) (>= row-val val))
-                        ((<=) (<= row-val val))
-                        ((/=) (not (equal row-val val)))
-                        (otherwise (error "Unsupported operator: ~a" op)))))
-                   ;; Условие вида (key . value)
-                   ((and (consp condit)
-                         (not (listp (car condit)))) ;; пара вида (key . value)
-                    (equal (cdr condit) (cdr (assoc (car condit) row))))
-                   ;; Некорректное условие
-                   (otherwise (error "Unsupported condition format: ~a" condit))))
-               ',conditions)))) ;; Убираем запятую
-    ;; Некорректный формат условия
-    (otherwise
-     (error "Unsupported condition format: ~a" ',conditions)))
+  `(lambda (row)
+     (every (lambda (condition)
+              (cond
+                ;; Условие вида (< age 30)
+                ((and (listp condition)
+                      (symbolp (car condition))
+                      (symbolp (cadr condition)))
+                 (let* ((col (cadr condition))
+                        (op (car condition))
+                        (val (caddr condition))
+                        (row-val (cdr (assoc col row))))
+                   (case op
+                     ((=) (equal row-val val))
+                     ((>) (> row-val val))
+                     ((<) (< row-val val))
+                     ((>=) (>= row-val val))
+                     ((<=) (<= row-val val))
+                     ((/=) (not (equal row-val val)))
+                     (otherwise (error "Unsupported operator: ~a~%" op)))))
 
+                ;; Условие вида (name . "Egor")
+                ((and (consp condition)
+                      (symbolp (car condition)))
+                 (let ((key (car condition))
+                       (value (cdr condition)))
+                   (equal value (cdr (assoc key row)))))
+
+                ((or (stringp condition) (not (consp condition)))
+                 (error "Unsupported condition format: ~a~%" condition))
+
+                (t (error "Unsupported condition format: ~a~%" condition))))
+            ,conditions)))
+
+
+		      
+			  
 
 
 
