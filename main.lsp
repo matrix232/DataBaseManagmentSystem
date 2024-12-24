@@ -140,6 +140,10 @@
 (defun get-column-names (columns)
   (mapcar (lambda (col) (intern (string (car col)))) columns))
 
+(defun filter (predicate rows)
+  "Фильтрует строки rows, оставляя только те, которые удовлетворяют предикату predicate."
+  (remove-if-not predicate rows))
+
 (defmacro create-condition (conditions)
   `(lambda (row)
      (every (lambda (condition)
@@ -173,6 +177,40 @@
 
                 (t (error "Unsupported condition format: ~a~%" condition))))
             ,conditions)))
+
+(defmacro make-select-from (table-name selected-columns &body body)
+  `(let* ((table (gethash ,table-name *database*))
+          (rows (table-rows table)))
+     (let ((filtered-rows
+            (if (not (null ',body))
+                (remove-if-not
+                 (lambda (row)
+                   (eval '(progn ,@body)))  ;; Выполнение body как кода
+                 rows)
+                rows)))
+       (mapcar (lambda (row)
+                 (mapcar (lambda (col)
+                           (cons col (cdr (assoc col row))))
+                         ',selected-columns))
+               filtered-rows))))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 		      
