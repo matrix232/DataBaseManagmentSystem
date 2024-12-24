@@ -66,7 +66,12 @@
     (format t "Rows matching condition1: ~a~%" (remove-if-not condition1 rows))
     (format t "Rows matching condition3: ~a~%" (remove-if-not condition3 rows))))
 
-
+(defun test-make-select-from (table-name columns rows selected-columns expected-result &rest body)
+  (create-table table-name columns)
+  (dolist (row rows)
+    (insert-into table-name row))
+  (let ((result (eval `(make-select-from ,table-name ,selected-columns ,@body))))
+    (as-eq "test-make-select-from" result expected-result)))
 
 
 (defun as-eq (test-name result expected)
@@ -76,6 +81,7 @@
   
 (defun run-unittest ()
   (format t "Начало тестирования...~%~%")
+  (test-create-condition)
   ;; Тестирование создания таблицы.
   (test-create-table 'test-table01 '((id . 1) (name . "adm")) 1)
   ;; Тестирование вставки данных в таблицу.
@@ -134,6 +140,16 @@
 			     ((id . 4) (name . "daniil") (age . 12)))
 			   "output.txt"
 			   1)
-  (test-create-condition)
+  (test-drop-table 'tab1 '((id integer) (name string) (age integer)) 1)
+  (test-make-select-from
+   'tab1                               ;; Имя таблицы
+   '((id integer) (name string) (age integer))  ;; Описание столбцов
+   '(((id . 1) (name . "alex") (age . 25))
+     ((id . 2) (name . "egor") (age . 54))
+     ((id . 3) (name . "vova") (age . 14))
+     ((id . 4) (name . "daniil") (age . 18)))  ;; Данные строк
+   '(name)  ;; Выбранные столбцы
+   '((name . "alex") (name . "egor"))  ;; Ожидаемый результат
+   (> age 20)) ;; Условие фильтрации
   		   
   (format t "~%Тестирования завершенно.~%"))
