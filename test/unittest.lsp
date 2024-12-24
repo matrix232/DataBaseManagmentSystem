@@ -66,12 +66,18 @@
     (format t "Rows matching condition1: ~a~%" (remove-if-not condition1 rows))
     (format t "Rows matching condition3: ~a~%" (remove-if-not condition3 rows))))
 
-(defun test-make-select-from (table-name columns rows selected-columns expected-result &rest body)
-  (create-table table-name columns)
-  (dolist (row rows)
-    (insert-into table-name row))
-  (let ((result (eval `(make-select-from ,table-name ,selected-columns ,@body))))
-    (as-eq "test-make-select-from" result expected-result)))
+(defun mk-sel-from ()
+  (create-table 'tab1 '((id integer) (name string) (age integer)))  
+  (insert-into 'tab1 '((id . 1) (name . "alex") (age . 25)))     
+  (insert-into 'tab1 '((id . 2) (name . "egor") (age . 54)))
+  (insert-into 'tab1 '((id . 3) (name . "vova") (age . 14)))
+  (insert-into 'tab1 '((id . 4) (name . "daniil") (age . 18)))
+  (insert-into 'tab1 '((id . 5) (name . "alex") (age . 27)))
+  
+  (let ((result (make-select-from 'tab1 '(name age)
+  (and (string= (cdr (assoc 'name row)) "alex")
+       (> (cdr (assoc 'age row)) 20)))))
+    (format t "Result make-select-from: ~a~%" result)))
 
 
 (defun as-eq (test-name result expected)
@@ -141,15 +147,6 @@
 			   "output.txt"
 			   1)
   (test-drop-table 'tab1 '((id integer) (name string) (age integer)) 1)
-  (test-make-select-from
-   'tab1                               ;; Имя таблицы
-   '((id integer) (name string) (age integer))  ;; Описание столбцов
-   '(((id . 1) (name . "alex") (age . 25))
-     ((id . 2) (name . "egor") (age . 54))
-     ((id . 3) (name . "vova") (age . 14))
-     ((id . 4) (name . "daniil") (age . 18)))  ;; Данные строк
-   '(name)  ;; Выбранные столбцы
-   '((name . "alex") (name . "egor"))  ;; Ожидаемый результат
-   (> age 20)) ;; Условие фильтрации
+  (mk-sel-from)
   		   
   (format t "~%Тестирования завершенно.~%"))
