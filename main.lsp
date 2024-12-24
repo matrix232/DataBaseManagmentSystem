@@ -178,21 +178,44 @@
                 (t (error "Unsupported condition format: ~a~%" condition))))
             ,conditions)))
 
-(defmacro make-select-from (table-name selected-columns &body body)
-  `(let* ((table (gethash ,table-name *database*))
-          (rows (table-rows table)))
-     (let ((filtered-rows
-            (if (not (null ',body))
-                (remove-if-not
-                 (lambda (row)
-                   (eval '(progn ,@body)))  ;; Выполнение body как кода
-                 rows)
-                rows)))
-       (mapcar (lambda (row)
-                 (mapcar (lambda (col)
-                           (cons col (cdr (assoc col row))))
-                         ',selected-columns))
-               filtered-rows))))
+(defmacro make-select-from (table-name columns &body body)
+  `(let ((table (gethash ,table-name *database*)))
+     (if table
+         (let ((table-columns (mapcar #'car (table-columns table))))
+	   ;; Проверка наличия всех выбранных столбцов
+           (if (every (lambda (col) 
+                        (member (intern (string-upcase (string col))) table-columns :test 'eq)) 
+                      ,columns)
+               (let* ((filtered-rows
+                       (remove-if-not (lambda (row) 
+                                        (let ()
+                                          ,@body)) ;; Выполняем действия полученные из body
+                                      (table-rows table))))
+		 ;; Вывод столбцов
+                 (mapcar (lambda (row) 
+                           (remove-if-not (lambda (pair) 
+                                            (member (car pair) ,columns :test 'equal))
+                                          row))
+                         filtered-rows))
+               (progn
+                 (format t "ERROR: Columns ~a not found in table ~a.~%" ,columns ,table-name)
+                 nil)))
+         (progn
+           (format t "ERROR: Table ~a not found!~%" ,table-name)
+           nil))))
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
