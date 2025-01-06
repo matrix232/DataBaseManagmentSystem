@@ -144,9 +144,10 @@
   "Фильтрует строки rows, оставляя только те, которые удовлетворяют предикату predicate."
   (remove-if-not predicate rows))
 
-(defun gen-vars (tab)
-  (mapcar (lambda (row)
-	    ())))
+(defun gen-vars (table)
+  (mapcar (lambda (col)
+	    `(,col (cdr (assoc ',col row))))
+	  (mapcar #'car (table-columns table))))
 
 (defmacro create-condition (conditions)
   `(lambda (row)
