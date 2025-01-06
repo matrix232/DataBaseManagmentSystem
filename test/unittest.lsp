@@ -79,6 +79,17 @@
        (> (cdr (assoc 'age row)) 20)))))
     (format t "Result make-select-from: ~a~%" result)))
 
+(defun mk-update-test ()
+  (create-table 'tab1 '((id integer) (name string) (age integer)))
+  (insert-into 'tab1 '((id . 1) (name . "alex") (age . 25)))     
+  (insert-into 'tab1 '((id . 2) (name . "egor") (age . 54)))
+  (insert-into 'tab1 '((id . 3) (name . "vova") (age . 14)))
+  (insert-into 'tab1 '((id . 4) (name . "daniil") (age . 18)))
+  (insert-into 'tab1 '((id . 5) (name . "alex") (age . 27)))
+
+  (make-update 'tab1 '((age . 20)) (< (cdr (assoc 'age row)) 20))
+  (let ((result (make-select-from 'tab1 '(id name age))))
+    (format t "Result make-update: ~a~%" result)))
 
 (defun as-eq (test-name result expected)
   (if (equal result expected)
@@ -148,5 +159,7 @@
 			   1)
   (test-drop-table 'tab1 '((id integer) (name string) (age integer)) 1)
   (mk-sel-from)
+  (test-drop-table 'tab1 '((id integer) (name string) (age integer)) 1)
+  (mk-update-test)
   		   
   (format t "~%Тестирования завершенно.~%"))
