@@ -144,6 +144,10 @@
   "Фильтрует строки rows, оставляя только те, которые удовлетворяют предикату predicate."
   (remove-if-not predicate rows))
 
+(defun gen-vars (tab)
+  (mapcar (lambda (row)
+	    ())))
+
 (defmacro create-condition (conditions)
   `(lambda (row)
      (every (lambda (condition)
@@ -188,7 +192,7 @@
                       ,columns)
                (let* ((filtered-rows
                        (remove-if-not (lambda (row) 
-                                        (let ()
+                                        (let () ;;,(gen-vars table) (id (cdr (assoc 'id row)))
                                           ,@body)) ;; Выполняем действия полученные из body
                                       (table-rows table))))
 		 ;; Вывод столбцов
@@ -204,43 +208,26 @@
            (format t "ERROR: Table ~a not found!~%" ,table-name)
            nil))))
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-		      
-			  
-
-
-
+(defmacro make-update (table-name updates &body body)
+  `(let* ((table (gethash ,table-name *database*))
+          (rows (table-rows table)))
+     (let ((updated-rows
+            (mapcar
+             (lambda (row)
+               (let ,(mapcar (lambda (col)
+                               `(,col (cdr (assoc ',col row))))
+                             (mapcar #'car (table-columns table)))
+                 (if (progn ,@body) ; Выполняем условия
+                     (let ((new-row (copy-list row)))
+                       (dolist (update ',updates)
+                         (let ((col (car update))
+                               (val (cdr update)))
+                           (setf (cdr (assoc col new-row)) val)))
+                       new-row)
+                     row))) ; Если условие не выполнено, строка остаётся неизменной
+             rows)))
+       (setf (table-rows table) updated-rows)
+       1)))
 
 
 
