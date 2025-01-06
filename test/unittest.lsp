@@ -91,6 +91,7 @@
   (let ((result (make-select-from 'tab1 '(id name age))))
     (format t "Result make-update: ~a~%" result)))
 
+
 (defun as-eq (test-name result expected)
   (if (equal result expected)
       (format t "~a: PASSED~%" test-name)
@@ -98,6 +99,7 @@
   
 (defun run-unittest ()
   (format t "Начало тестирования...~%~%")
+  (test-gen-vars)
   (test-create-condition)
   ;; Тестирование создания таблицы.
   (test-create-table 'test-table01 '((id . 1) (name . "adm")) 1)
