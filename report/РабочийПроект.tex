@@ -1,0 +1,64 @@
+\section{Рабочий проект}
+\subsection{Структуры, используемые при разработке СУБД}
+
+Можно выделить следующий список структур и их методов, использованных при разработке СУБД (таблица \ref{class:table}).
+
+\renewcommand{\arraystretch}{0.8} % уменьшение расстояний до сетки таблицы
+\begin{xltabular}{\textwidth}{|X|p{2.5cm}|>{\setlength{\baselineskip}{0.7\baselineskip}}p{4.85cm}|>{\setlength{\baselineskip}{0.7\baselineskip}}p{4.85cm}|}
+\caption{Описание структур, используемых в СУБД\label{class:table}}\\
+\hline \centrow \setlength{\baselineskip}{0.7\baselineskip} Название структуры & \centrow \setlength{\baselineskip}{0.7\baselineskip} Модуль, к которому относится структура & \centrow Описание структуры & \centrow Методы \\
+\hline \centrow 1 & \centrow 2 & \centrow 3 & \centrow 4\\ \hline
+\endfirsthead
+\caption*{Продолжение таблицы \ref{class:table}}\\
+\hline \centrow 1 & \centrow 2 & \centrow 3 & \centrow 4\\ \hline
+\finishhead
+table & main & table – основная структура приложения. Имеет такие поля как: name, rows, columns. & Нет.\\
+\end{xltabular}
+\renewcommand{\arraystretch}{1.0} % восстановление сетки
+
+\subsection{Описание функций системы управления базами данных}
+
+\begin{enumerate}
+\item create-table -- функция для создания таблицы. 
+\item insert-into -- функция для вставки данных в таблицу.
+\item make-select-from -- макрос для выборки данных по различным критериям.
+\item delete-from -- функция для удаления данных из таблицы.
+\item drop-table -- функция для удаления таблицы.
+\item backup-table -- функция для создании копии таблицы в другую таблицу.
+\item save-table-to-file -- функция для записи таблицы в другой файл.
+\item make-update -- макрос для обновления данных по различным критериям.
+\end{enumerate}
+
+\subsection{Автоматизированное тестирование СУБД}
+
+Один из автоматизированных тестов функций СУБД представлен на рисунке \ref{unittest:image}.
+
+\begin{figure}[ht]
+\begin{lstlisting}[language=Lisp]
+(defun test-select-from (table-name columns rows selected-columns expected-result &optional condition)
+(create-table table-name columns)
+(dolist (row rows)
+(insert-into table-name row))
+(let ((result (select-from table-name selected-columns condition)))
+(as-eq "test-select-from" result expected-result)))
+\end{lstlisting}  
+\caption{Автоматизированный тест функции}
+\label{unittest:image}
+\end{figure}
+
+Вызов теста может осуществляться с разными входными данными. Пример представлен на рисунке \ref{unittestEx:image}.
+
+\begin{figure}[ht]
+\begin{lstlisting}[language=Lisp]
+		(test-select-from 'test-table1211
+		'((id integer) (name string) (age integer))
+		'(((id . 1) (name . "egor") (age . 19))
+		((id . 2) (name . "admin") (age . 24))
+		((id . 3) (name . "alex") (age . 26)))
+		'(name)
+		'(((name . "admin")))
+		'((> age 23) (/= name "alex")))
+\end{lstlisting}  
+\caption{Вызов автоматизированного теста функции}
+\label{unittestEx:image}
+\end{figure}

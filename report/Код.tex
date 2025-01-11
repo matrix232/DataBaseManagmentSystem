@@ -1,0 +1,367 @@
+\appendix{Фрагменты исходного кода программы}
+
+main.lsp
+\begin{lstlisting}[language=Lisp]
+	(defpackage :DBMS-package
+	(:use :cl))
+	
+	(defstruct table
+	name
+	rows
+	columns)
+	
+	(defvar *database* (make-hash-table :test 'equal))
+	
+	; Функции для работы с таблицей
+	(defun create-table (name &optional columns)
+	(progn
+	(unless (gethash name *database*)
+	(setf (gethash name *database*) (make-table :name name :columns columns :rows nil)))
+	1))
+	
+	(defun insert-into (table-name row-data)
+	(let ((table (gethash table-name *database*)))
+	(if table
+	(let* ((columns (table-columns table))
+	(column-names (get-column-names columns)))
+	;;Проверка, что все переданные ключи есть в колонках таблицы, ключи приводятся из  строкового формата в знаковый
+	(if (every (lambda (col) (member (intern (string-upcase (string col))) column-names :test 'eq)) (mapcar #'car row-data))
+	(progn
+	(push row-data (table-rows table)))
+	;; (format t "Rows ~a inserted into~%" row-data))
+	(format t "ERROR: Some columns is not exist in table ~a~%" table-name)))
+	(format t "ERROR: Table ~a not found!~%" table-name))))
+	
+	(defun select-all (table-name)
+	(let ((table (gethash table-name *database*)))
+	(if table
+	(table-rows table)
+	(progn
+	(format t "ERROR: Table ~a not found!~%")
+	nil))))
+	
+	
+	(defun delete-from (table-name cond-pair)
+	(let ((table (gethash table-name *database*)))
+	(if table
+	(let ((new-rows (remove-if (lambda (row) (every (lambda (condit) (equal (cdr condit) (cdr (assoc (car condit) row)))) cond-pair)) (table-rows table))))
+	(setf (table-rows table) new-rows)
+	(format t "Rows matching ~a deleted from table ~a.~%" cond-pair table-name) new-rows)
+	(format t "ERROR: Table ~a not found!~%" table-name))))
+	
+	(defun drop-table (table-name)
+	(if (gethash table-name *database*)
+	(progn
+	(remhash table-name *database*)
+	(format t "Table ~a dropped!~%" table-name)
+	1)
+	(progn
+	(format t "ERROR: Table ~a not found!~%" table-name)
+	nil)))
+	
+	(defun backup-table (table-name backup-name)
+	(let ((table (gethash table-name *database*)))
+	(if table
+	(progn
+	(setf (gethash backup-name *database*)
+	(make-table    :name (table-name table)
+	:columns (copy-list (table-columns table))
+	:rows (copy-list (table-rows table))))
+	(progn
+	(format t "Backup of table ~a success, create backup table ~a!~%" table-name backup-name)
+	1))
+	(progn
+	(format t "ERROR: Table ~a nor found!~%" table-name)
+	nil))))
+	
+	(defun save-table-to-file (table-name file-path)
+	(let ((table (gethash table-name *database*)))
+	(if table
+	(with-open-file (stream file-path :direction :output 
+	:if-exists :supersede
+	:if-does-not-exist :create)
+	(let ((columns (table-columns table)))
+	;; Запись заголовков
+	(format stream "~{~A~^,~}~%" (mapcar #'car columns))
+	;; Запись строк
+	(dolist (row (table-rows table))
+	(format stream "~{~A~^,~}~%" 
+	(mapcar (lambda (col) (cdr (assoc (car col) row)))  columns))))
+	1)
+	(format t "ERROR: Table ~a not found!~%" table-name))))			 
+	
+	(defun table-exist (table-name)
+	(not (null (gethash table-name *database*))))
+	
+	(defun get-column-names (columns)
+	(mapcar (lambda (col) (intern (string (car col)))) columns))
+	
+	(defun filter (predicate rows)
+	"Фильтрует строки rows, оставляя только те, которые удовлетворяют предикату predicate."
+	(remove-if-not predicate rows))
+	
+	(defun gen-vars (table)
+	(mapcar (lambda (col)
+	`(,col (cdr (assoc ',col row))))
+	(mapcar #'car (table-columns table))))
+	
+	(defmacro create-condition (conditions)
+	`(lambda (row)
+	(every (lambda (condition)
+	(cond
+	;; Условие вида (< age 30)
+	((and (listp condition)
+	(symbolp (car condition))
+	(symbolp (cadr condition)))
+	(let* ((col (cadr condition))
+	(op (car condition))
+	(val (caddr condition))
+	(row-val (cdr (assoc col row))))
+	(case op
+	((=) (equal row-val val))
+	((>) (> row-val val))
+	((<) (< row-val val))
+	((>=) (>= row-val val))
+	((<=) (<= row-val val))
+	((/=) (not (equal row-val val)))
+	(otherwise (error "Unsupported operator: ~a~%" op)))))
+	
+	;; Условие вида (name . "Egor")
+	((and (consp condition)
+	(symbolp (car condition)))
+	(let ((key (car condition))
+	(value (cdr condition)))
+	(equal value (cdr (assoc key row)))))
+	
+	((or (stringp condition) (not (consp condition)))
+	(error "Unsupported condition format: ~a~%" condition))
+	
+	(t (error "Unsupported condition format: ~a~%" condition))))
+	,conditions)))
+	
+	(defmacro make-select-from (table-name columns &body body)
+	`(let ((table (gethash ,table-name *database*)))
+	(if table
+	(let ((table-columns (mapcar #'car (table-columns table))))
+	;; Проверка наличия всех выбранных столбцов
+	(if (every (lambda (col) 
+	(member (intern (string-upcase (string col))) table-columns :test 'eq)) 
+	,columns)
+	(let* ((filtered-rows
+	(remove-if-not (lambda (row) 
+	(let () ;;,(gen-vars table) (id (cdr (assoc 'id row)))
+	,@body)) ;; Выполняем действия полученные из body
+	(table-rows table))))
+	;; Вывод столбцов
+	(mapcar (lambda (row) 
+	(remove-if-not (lambda (pair) 
+	(member (car pair) ,columns :test 'equal))
+	row))
+	filtered-rows))
+	(progn
+	(format t "ERROR: Columns ~a not found in table ~a.~%" ,columns ,table-name)
+	nil)))
+	(progn
+	(format t "ERROR: Table ~a not found!~%" ,table-name)
+	nil))))
+	
+	(defmacro make-update (table-name updates &body body)
+	`(let* ((table (gethash ,table-name *database*))
+	(rows (table-rows table)))
+	(let ((updated-rows
+	(mapcar
+	(lambda (row)
+	(let ,(mapcar (lambda (col)
+	`(,col (cdr (assoc ',col row))))
+	(mapcar #'car (table-columns table)))
+	(if (progn ,@body) ; Выполняем условия
+	(let ((new-row (copy-list row)))
+	(dolist (update ',updates)
+	(let ((col (car update))
+	(val (cdr update)))
+	(setf (cdr (assoc col new-row)) val)))
+	new-row)
+	row))) ; Если условие не выполнено, строка остаётся неизменной
+	rows)))
+	(setf (table-rows table) updated-rows)
+	1)))
+\end{lstlisting} 
+
+unittest.lsp
+\begin{lstlisting}[language=Lisp]
+	(load "./main.lsp")
+	(format t "Файл main.lsp загружен~%")
+	;(in-package :DBMS-package)
+	
+	(defun test-create-table (table-name &optional columns expected-result)
+	(let ((result (create-table table-name columns)))
+	(as-eq "test-create-table" result expected-result)))
+	
+	(defun test-insert-into (table-name columns row expected-row)
+	(create-table table-name columns)
+	(insert-into table-name row)
+	(let ((table (gethash table-name *database*)))
+	(if table
+	(let ((actual-row (first (table-rows table))))
+	(as-eq "test-insert-into" actual-row expected-row))
+	(format t "ERROR: Table ~a не найдена в базе данных~%" table-name))))
+	
+	(defun test-select-from (table-name columns rows selected-columns expected-result &optional condition)
+	(create-table table-name columns)
+	(dolist (row rows)
+	(insert-into table-name row))
+	(let ((result (select-from table-name selected-columns condition)))
+	(as-eq "test-select-from" result expected-result)))
+	
+	(defun test-select-all (table-name columns rows expected-result)
+	(create-table table-name columns)
+	(dolist (row rows)
+	(insert-into table-name row))
+	(let ((result (select-all table-name)))
+	(as-eq "test-select-all" result expected-result)))
+	
+	(defun test-drop-table (table-name columns expected-result)
+	(create-table table-name columns)
+	(let ((result (drop-table table-name)))
+	(as-eq "test-drop-table" result expected-result)))
+	
+	(defun test-update-data (table-name columns rows id field-name new-value expected-result)
+	(create-table table-name columns)
+	(dolist (row rows)
+	(insert-into table-name row))
+	(let ((result (update table-name id field-name new-value))) 
+	(as-eq "test-update" result expected-result)))
+	
+	(defun test-backup-table (table-name columns rows backup-name expected-result)
+	(create-table table-name columns)
+	(dolist (row rows)
+	(insert-into table-name row))
+	(let ((result (backup-table table-name backup-name)))
+	(as-eq "test-backup-table" result expected-result)))
+	
+	(defun test-save-table-to-file (table-name columns rows path expected-result)
+	(create-table table-name columns)
+	(dolist (row rows)
+	(insert-into table-name row))
+	(let ((result (save-table-to-file table-name path)))
+	(as-eq "test-save-table-to-file" result expected-result)))
+	
+	(defun test-create-condition ()
+	(let* ((rows '(((id . 1) (name . "Alice") (age . 25))
+	((id . 2) (name . "Egor") (age . 30))
+	((id . 3) (name . "Alex") (age . 35))))
+	;; Условие: возраст < 30
+	(condition1 (create-condition '((< age 30))))
+	;; Условие: возраст между 20 и 40
+	(condition3 (create-condition '((>= age 30) (/= name "Alex")))))
+	(format t "Rows matching condition1: ~a~%" (remove-if-not condition1 rows))
+	(format t "Rows matching condition3: ~a~%" (remove-if-not condition3 rows))))
+	
+	(defun mk-sel-from ()
+	(create-table 'tab1 '((id integer) (name string) (age integer)))  
+	(insert-into 'tab1 '((id . 1) (name . "alex") (age . 25)))     
+	(insert-into 'tab1 '((id . 2) (name . "egor") (age . 54)))
+	(insert-into 'tab1 '((id . 3) (name . "vova") (age . 14)))
+	(insert-into 'tab1 '((id . 4) (name . "daniil") (age . 18)))
+	(insert-into 'tab1 '((id . 5) (name . "alex") (age . 27)))
+	
+	(let ((result (make-select-from 'tab1 '(name age)
+	(and (string= (cdr (assoc 'name row)) "alex")
+	(> (cdr (assoc 'age row)) 20)))))
+	(format t "Result make-select-from: ~a~%" result)))
+	
+	(defun mk-update-test ()
+	(create-table 'tab1 '((id integer) (name string) (age integer)))
+	(insert-into 'tab1 '((id . 1) (name . "alex") (age . 25)))     
+	(insert-into 'tab1 '((id . 2) (name . "egor") (age . 54)))
+	(insert-into 'tab1 '((id . 3) (name . "vova") (age . 14)))
+	(insert-into 'tab1 '((id . 4) (name . "daniil") (age . 18)))
+	(insert-into 'tab1 '((id . 5) (name . "alex") (age . 27)))
+	
+	(make-update 'tab1 '((age . 20)) (< (cdr (assoc 'age row)) 20))
+	(let ((result (make-select-from 'tab1 '(id name age))))
+	(format t "Result make-update: ~a~%" result)))
+	
+	
+	(defun as-eq (test-name result expected)
+	(if (equal result expected)
+	(format t "~a: PASSED~%" test-name)
+	(format t "~a: FAILED - ожидалось ~a, но было полученно ~a~%" test-name expected result)))
+	
+	(defun run-unittest ()
+	(format t "Начало тестирования...~%~%")
+	(test-gen-vars)
+	(test-create-condition)
+	;; Тестирование создания таблицы.
+	(test-create-table 'test-table01 '((id . 1) (name . "adm")) 1)
+	;; Тестирование вставки данных в таблицу.
+	(test-insert-into 'users '((id integer) (name string) (age integer))
+	'((id . 1) (name . "adm") (age . 24))
+	'((id . 1) (name . "adm") (age . 24)))
+	(test-drop-table 'test-table111 '((id integer) (name string) (age integer)) 1)
+	;; Тестирование чтения данных из таблицы без условия.
+	(test-select-from 'test-table111
+	'((id integer) (name string) (age integer))
+	'(((id . 1) (name . "egor") (age . 19))
+	((id . 2) (name . "admin") (age . 24)))
+	'(name)
+	'(((name . "admin")) ((name . "egor")))
+	nil)
+	;; Тестирование чтения данных из таблицы с условием.
+	(test-drop-table 'test-table1211 '((id integer) (name string)) 1)
+	(test-select-from 'test-table1211
+	'((id integer) (name string) (age integer))
+	'(((id . 1) (name . "egor") (age . 19))
+	((id . 2) (name . "admin") (age . 24))
+	((id . 3) (name . "alex") (age . 26)))
+	'(name)
+	'(((name . "admin")))
+	'((> age 23) (/= name "alex")))
+	;; Тестирование удаления таблицы.
+	(test-drop-table 'table1 '((id integer) (name string)) 1)
+	;; Тестирование чтения всех данных из таблицы.
+	(test-select-all 'table1 '((id integer) (name string))
+	'(((id . 1) (name . "adm"))
+	((id . 2) (name . "adm1")))
+	'(((id . 2) (name . "adm1"))
+	((id . 1) (name . "adm"))))
+	;; Тестирование функции обновления данных по id
+	(test-drop-table 'table999 '((id integer) (name string) (age integer)) 1)
+	(test-update-data 'table999 '((id integer) (name string) (age integer))
+	'(((id . 1) (name . "egor") (age . 19))
+	((id . 2) (name . "admin") (age . 24)))
+	1
+	'name
+	"update-egor"
+	'((id . 1) (name . "update-egor") (age . 19)))
+	;; Тестирование функции создания копии таблицы
+	(test-backup-table 'table2213 '((id integer) (name string) (age integer))
+	'(((id . 1) (name . "egor"))
+	((id . 2) (name . "alex"))
+	((id . 3) (name . "asd")))
+	'backup-table2213
+	1)
+	;; Тестирование функции записи таблицы в CSV файл
+	(test-drop-table 'table2214 '((id integer) (name string) (age integer)) 1)
+	(test-save-table-to-file 'table2214 '((id integer) (name string) (age integer))
+	'(((id . 1) (name . "alex") (age . 23))
+	((id . 2) (name . "egor") (age . 24))
+	((id . 3) (name . "vova") (age . 25))
+	((id . 4) (name . "daniil") (age . 12)))
+	"output.txt"
+	1)
+	(test-drop-table 'tab1 '((id integer) (name string) (age integer)) 1)
+	(mk-sel-from)
+	(test-drop-table 'tab1 '((id integer) (name string) (age integer)) 1)
+	(mk-update-test)
+	
+	(format t "~%Тестирования завершенно.~%"))
+\end{lstlisting}  
+
+\ifВКР{
+\newpage
+\addcontentsline{toc}{section}{На отдельных листах (CD-RW в прикрепленном конверте)}
+\begin{center}
+\textbf{Место для диска}
+\end{center}
+}\fi

@@ -3,3 +3,10 @@
 .gitignore~
 main.lsp~
 main.fasl
+report/main.aux
+report/main.toc
+report/main.synctex.gz
+report/main.lpc
+report/main.out
+report/main.log
+report/main.lop
