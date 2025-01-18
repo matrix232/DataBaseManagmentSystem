@@ -117,7 +117,6 @@
                     (mapcar (lambda (col) (cdr (assoc col row))) columns))))
         (format t "ERROR: Table ~a not found!~%" table-name))))
 
-
 (defun update (table-name id field-name new-value)
   "Обновляет значение поля field-name для строки с указанным id."
   (let ((table (gethash table-name *database*)))
