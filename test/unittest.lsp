@@ -214,6 +214,7 @@
 		       ((id . 3) (name . "Victor") (age . 25)))
 		     'age
 		     t)
+  (test-drop-table 'disp-tab '((id integer) (name string) (age integer)) 1)
   (test-display-table 'disp-tab '((id integer) (name string))
 		      '(((id . 1) (name . "Alex"))
 			((id . 2) (name . "Egor"))
