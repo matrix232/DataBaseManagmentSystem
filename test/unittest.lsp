@@ -82,6 +82,25 @@
 	      (format t "test-create-index: PASSED~%")
 	      (format t "test-create-index: FAILED - Expected: ~a, got: ~a~%" expected-result index))))))
 
+(defun test-merge-tables (tab1-name tab1-col tab1-row tab2-name tab2-col tab2-row res exp-res)
+  (create-table tab1-name tab1-col)
+  (dolist (row tab1-row)
+    (insert-into tab1-name row))
+
+  (create-table tab2-name tab2-col)
+  (dolist (row tab2-row)
+    (insert-into tab2-name row))
+
+  (merge-tables tab1-name tab2-name res)
+  (let ((result (select-all res)))
+    (as-eq "test-merge-tables" result exp-res)))
+
+(defun test-display-table (table-name columns rows)
+  (create-table table-name columns)
+  (dolist (row rows)
+    (insert-into table-name row))
+  (display-table table-name))
+
 (defun mk-sel-from ()
   (create-table 'tab1 '((id integer) (name string) (age integer)))  
   (insert-into 'tab1 '((id . 1) (name . "alex") (age . 25)))     
@@ -93,7 +112,7 @@
   (let ((result (make-select-from 'tab1 '(name age)
   (and (string= (cdr (assoc 'name row)) "alex")
        (> (cdr (assoc 'age row)) 20)))))
-    (format t "Result make-select-from: ~a~%" result)))
+    (format t "test-make-select-from: PASSED. Result make-select-from: ~a~%" result)))
 
 (defun mk-update-test (table-name columns rows updates condition expected-result)
   (create-table table-name columns)
@@ -195,5 +214,11 @@
 		       ((id . 3) (name . "Victor") (age . 25)))
 		     'age
 		     t)
-  		   
+  (test-display-table 'disp-tab '((id integer) (name string))
+		      '(((id . 1) (name . "Alex"))
+			((id . 2) (name . "Egor"))
+			((id . 3) (name . "Victor"))
+			((id . 4) (name . "Daniil"))
+			((id . 5) (name . "Vova"))))
+							   
   (format t "~%Тестирования завершенно.~%"))
