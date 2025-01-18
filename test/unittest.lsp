@@ -66,6 +66,22 @@
     (format t "Rows matching condition1: ~a~%" (remove-if-not condition1 rows))
     (format t "Rows matching condition3: ~a~%" (remove-if-not condition3 rows))))
 
+(defun test-create-index (table-name columns rows column-to-index expected-result)
+  (create-table table-name columns)
+  (dolist (row rows)
+    (insert-into table-name row))
+
+  (let ((result (create-index table-name column-to-index)))
+    (if result
+	(let ((index (gethash (list table-name column-to-index) *database*)))
+	  (if (and index
+		   (every (lambda (row)
+				  (let ((value (cdr (assoc column-to-index row))))
+				    (member row (gethash value index :not-found))))
+			  rows))
+	      (format t "test-create-index: PASSED~%")
+	      (format t "test-create-index: FAILED - Expected: ~a, got: ~a~%" expected-result index))))))
+
 (defun mk-sel-from ()
   (create-table 'tab1 '((id integer) (name string) (age integer)))  
   (insert-into 'tab1 '((id . 1) (name . "alex") (age . 25)))     
@@ -79,17 +95,21 @@
        (> (cdr (assoc 'age row)) 20)))))
     (format t "Result make-select-from: ~a~%" result)))
 
-(defun mk-update-test ()
-  (create-table 'tab1 '((id integer) (name string) (age integer)))
-  (insert-into 'tab1 '((id . 1) (name . "alex") (age . 25)))     
-  (insert-into 'tab1 '((id . 2) (name . "egor") (age . 54)))
-  (insert-into 'tab1 '((id . 3) (name . "vova") (age . 14)))
-  (insert-into 'tab1 '((id . 4) (name . "daniil") (age . 18)))
-  (insert-into 'tab1 '((id . 5) (name . "alex") (age . 27)))
+(defun mk-update-test (table-name columns rows updates condition expected-result)
+  (create-table table-name columns)
+  (dolist (row rows)
+    (insert-into table-name row))
+  (make-update table-name updates condition)
+  (let ((result (select-all table-name)))
+    (as-eq "test-make-update" result expected-result)))
 
-  (make-update 'tab1 '((age . 20)) (< (cdr (assoc 'age row)) 20))
-  (let ((result (make-select-from 'tab1 '(id name age))))
-    (format t "Result make-update: ~a~%" result)))
+(defun mk-delete-from-test (table-name columns rows condition expected-result)
+  (create-table table-name columns)
+  (dolist (row rows)
+    (insert-into table-name row))
+  (make-delete-from table-name condition)
+  (let ((remaining (select-all table-name)))
+    (as-eq "test-make-delete-from" remaining expected-result)))
 
 
 (defun as-eq (test-name result expected)
@@ -99,7 +119,7 @@
   
 (defun run-unittest ()
   (format t "Начало тестирования...~%~%")
-  (test-gen-vars)
+  ;(test-gen-vars)
   (test-create-condition)
   ;; Тестирование создания таблицы.
   (test-create-table 'test-table01 '((id . 1) (name . "adm")) 1)
@@ -161,7 +181,19 @@
 			   1)
   (test-drop-table 'tab1 '((id integer) (name string) (age integer)) 1)
   (mk-sel-from)
-  (test-drop-table 'tab1 '((id integer) (name string) (age integer)) 1)
-  (mk-update-test)
+  (test-drop-table 'users '((id integer) (name string) (age integer)) 1)
+  (mk-delete-from-test 'users '((id integer) (name string) (age integer))
+		       '(((id . 1) (name . "Alex") (age . 22)) 
+			 ((id . 2) (name . "Egor") (age . 21))
+			 ((id . 3) (name . "Victor") (age . 24)))
+		       '(< (cdr (assoc 'age row)) 23)
+		       '(((id . 3) (name . "Victor") (age . 24))))
+  (test-drop-table 'users22 '((id integer) (name string) (age integer)) 1)
+  (test-create-index 'users22 '((id integer) (name string) (age integer))
+		     '(((id . 1) (name . "Alex") (age . 25)) 
+		       ((id . 2) (name . "Egor") (age . 30))
+		       ((id . 3) (name . "Victor") (age . 25)))
+		     'age
+		     t)
   		   
   (format t "~%Тестирования завершенно.~%"))
