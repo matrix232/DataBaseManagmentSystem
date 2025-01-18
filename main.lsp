@@ -91,6 +91,33 @@
 	  (format t "ERROR: Table ~a not found!~%" table-name)
 	  nil))))
 
+(defun merge-tables (table1 table2 result-table-name)
+  (let ((t1 (gethash table1 *database*))
+	(t2 (gethash table2 *database*)))
+    (if (and t1 t2
+	     (equal (table-columns t1) (table-columns t2)))
+	(let ((merged-rows (append (table-rows t1) (table-rows t2))))
+	  (create-table result-table-name (table-columns t1))
+	  (dolist (row merged-rows)
+	    (insert-into result-table-name row))
+	  (format t "Tables ~a and ~a merged into ~a.~%" table1 table2 result-table-name))
+	(format t "ERROR: Tables ~a and ~a are not compatible or not found!~%" table1 table2))))
+
+(defun display-table (table-name)
+  (let ((table (gethash table-name *database*)))
+    (if table
+        (let ((columns (mapcar #'car (table-columns table)))
+              (rows (table-rows table)))
+          ;; Печать заголовков
+          (format t "~{~a~^ | ~}~%" columns)
+          (format t "~a~%" (make-string (* (length columns) 10) :initial-element #\-))
+          ;; Печать строк
+          (dolist (row rows)
+            (format t "~{~a~^ | ~}~%"
+                    (mapcar (lambda (col) (cdr (assoc col row))) columns))))
+        (format t "ERROR: Table ~a not found!~%" table-name))))
+
+
 (defun update (table-name id field-name new-value)
   "Обновляет значение поля field-name для строки с указанным id."
   (let ((table (gethash table-name *database*)))
