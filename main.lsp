@@ -78,6 +78,19 @@
 	(format t "ERROR: Table ~a not found!~%" table-name)
 	nil)))
 
+(defun create-index (table-name columns)
+  (let ((table (gethash table-name *database*)))
+    (if table
+	(let ((index (make-hash-table :test 'equal)))
+	  (dolist (row (table-rows table))
+	    (let ((value (cdr (assoc columns row))))
+	      (push row (gethash value index))))
+	  (setf (gethash (list table-name columns) *database*) index)
+	  (format t "Index created for column ~a in table ~a.~%" columns table-name))
+	(progn
+	  (format t "ERROR: Table ~a not found!~%" table-name)
+	  nil))))
+
 (defun update (table-name id field-name new-value)
   "Обновляет значение поля field-name для строки с указанным id."
   (let ((table (gethash table-name *database*)))
@@ -229,6 +242,18 @@
              rows)))
        (setf (table-rows table) updated-rows)
        1)))
+
+(defmacro make-delete-from (table-name &body body)
+  `(let ((table (gethash ,table-name *database*)))
+     (if table
+	 (let ((filtered-rows (remove-if-not (lambda (row) (let () ,@body))
+					     (table-rows table))))
+	   (setf (table-rows table) filtered-rows)
+	   (format t "Rows deleted from table ~a based on condition.~%" ,table-name)
+	   filtered-rows)
+	 (progn
+	   (format t "ERROR: Table ~a not found!~%" ,table-name)
+	   nil))))
 
 
 
